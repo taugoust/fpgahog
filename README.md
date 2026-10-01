@@ -25,13 +25,13 @@ Commands:
 Anything claimable is a *resource*: `host` is the whole machine, every other name is an FPGA.
 
 ```bash
-sudo fpgahog claim u280 4h running perf tests   # one board
-sudo fpgahog claim host 15min --exclusive       # the machine
-sudo fpgahog claim host,u280 2h                 # both at once
-sudo fpgahog release u280                       # give one back
-sudo fpgahog release                            # give back your hogs and exclusive claims
-sudo fpgahog hog                                # lock ssh, timers and every board
-fpgahog check u280 || exit 1                    # in a script, before touching a board
+sudo fpgahog claim u280 4h running perf tests
+sudo fpgahog claim host 15min --exclusive
+sudo fpgahog claim host,u280 2h
+sudo fpgahog release u280
+sudo fpgahog release
+sudo fpgahog hog
+fpgahog check u280 || exit 1
 ```
 
 Claims on different boards never collide, so two people can use two cards at once. FPGA claims
@@ -53,7 +53,7 @@ what was guessed:
 { "alias": "u280", "bdf": "0000:c1:00.0", "pci_id": "10ee:903f",
   "devices": ["/dev/coyote_ultrascale_plus_fpga_0_reconfig",
               "/dev/coyote_ultrascale_plus_fpga_0_v0"],
-  "cables":  ["217702174005"] }
+  "cables": ["217702174005"] }
 ```
 
 A human has to check `devices`: a node named `coyote_fpga_0` carries an enumeration index, not
@@ -104,7 +104,9 @@ undoes a hog whose claim is gone.
 
 ## Advisory per-resource leases (JSON v1)
 
-Resource identifiers are opaque stable strings chosen by clients (for example `fpga-slot-01`); hosthog does not identify or control hardware. Leases are advisory reservations only: they do not enforce device access, and expiry does not imply hardware quiescence or recovery.
+The lease API is a separate advisory protocol and does not interoperate with enforced FPGA
+claims. Resource identifiers are opaque stable strings chosen by clients; leases do not control
+hardware, and expiry does not imply hardware quiescence or recovery.
 
 ```sh
 sudo hosthog lease acquire fpga-slot-01 --mode exclusive --seconds 3600 --session agent-1
@@ -114,14 +116,20 @@ sudo hosthog lease renew fpga-slot-01 --token TOKEN --seconds 1800
 sudo hosthog lease release fpga-slot-01 --token TOKEN
 ```
 
-Shared leases coexist; exclusive leases conflict with every active lease. Responses are a single JSON object with `version: 1` and `result`; errors are JSON on stderr. Exit codes: 2 invalid input, 3 busy, 4 not owner/not found, 5 expired, 6 state/system error. Mutation requires both token and the caller's real UID, so sessions under one user cannot release each other's leases. State is separate from legacy host-wide claim state. Production state is root-protected under `/var/lib/hosthog/leases`; `HOSTHOG_LEASE_STATE` permits an absolute isolated path only for unprivileged invocations, for tests. Expiry is logical only: it does not reset/program hardware, kill processes, or establish device safety. No FPGA identity binding or quarantine/recovery inference is performed.
+Shared leases coexist; exclusive leases conflict with every active lease. Responses are a single
+JSON object with `version: 1` and `result`; errors are JSON on stderr. Exit codes: 2 invalid
+input, 3 busy, 4 not owner/not found, 5 expired, 6 state/system error. Mutation requires both
+token and the caller's real UID. State is separate from host-wide claim state. Production state
+is root-protected under `/var/lib/hosthog/leases`; `HOSTHOG_LEASE_STATE` permits an absolute
+isolated path only for unprivileged invocations, for tests. Lease expiry is logical only: it
+does not reset/program hardware, kill processes, or establish device safety.
 
-## Installation
+## Nix packaging
 
 Needs `at` for claims to expire on time.
 
 ```bash
-just install     # builds the nix package and pins it at /var/lib/fpgahog/pkg as a GC root
+just install
 ln -s /var/lib/fpgahog/pkg/bin/fpgahog ~/.local/bin/fpgahog
 ```
 
@@ -129,4 +137,4 @@ Link the binary, not the directory: the package also provides a `hosthog` that w
 installed one. Expiry and lock re-checks run fpgahog again later from `at`, and they use this
 installed copy, so rebuilding the repository cannot strand a claim. `cargo install --path .`
 works too, but then those jobs call whichever binary scheduled them, and fpgahog warns when
-that is a `target/` build.
+that is a `target/` build. Advisory lease expiry is logical and needs no scheduler.
