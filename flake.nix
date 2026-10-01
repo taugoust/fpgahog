@@ -61,6 +61,19 @@
               mainProgram = "fpgahog";
             };
           };
+<<<<<<< HEAD
+=======
+          hosthog = pkgs.symlinkJoin {
+            name = "hosthog-${cargoMetadata.version}";
+            paths = [ unwrappedHosthog ];
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            postBuild = ''
+              wrapProgram $out/bin/hosthog \
+                --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.util-linux pkgs.at ]}
+            '';
+            meta = unwrappedHosthog.meta;
+          };
+>>>>>>> cdec4ff (Bundle at client in runtime wrapper)
         in {
 <<<<<<< HEAD
           packages.default = fpgahog;

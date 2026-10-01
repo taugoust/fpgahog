@@ -135,11 +135,11 @@ ln -s /var/lib/fpgahog/pkg/bin/fpgahog ~/.local/bin/fpgahog
 
 The flake package targets Linux (`x86_64-linux` and `aarch64-linux`). It installs both
 `fpgahog` and the compatibility `hosthog` name. Runtime utilities (`who`, `wall`, and `at`) are
-not bundled: the first two are needed for `users` and `post`, while the host must provide an `at`
-client and configured `atd` service for claim expiry and lock re-checks. The scheduled command
-uses the installed pinned binary, so repository rebuilds cannot strand a claim. `cargo install
---path .` works too, but jobs may call a build output; fpgahog warns when that is the case.
-Advisory lease expiry is logical and needs no scheduler.
+bundled in the Nix wrapper. The host still needs a configured `atd` service for claim expiry
+and lock re-checks; otherwise expiry cleanup is not guaranteed. The scheduled command uses the
+installed pinned binary, so repository rebuilds cannot strand a claim. `cargo install --path .`
+works too, but jobs may call a build output; fpgahog warns when that is the case. Advisory lease
+expiry is logical and needs no scheduler.
 
 Legacy host-wide state is under `/var/lib/fpgahog`; advisory lease state is separately under
 `/var/lib/hosthog/leases`. Host mutations require suitable privileges and configured host
