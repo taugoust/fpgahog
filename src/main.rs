@@ -10,6 +10,7 @@ mod users;
 mod claims;
 mod util;
 mod systemd_units;
+mod leases;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -19,7 +20,7 @@ struct Cli {
     command: Option<Commands>,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 struct StatusCommand {
     #[arg(short, long)]
     /// More detailed status
@@ -33,7 +34,7 @@ impl Default for StatusCommand {
     }
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct ClaimCommand {
     /// `[RESOURCE] TIMEOUT [COMMENT]...`. RESOURCE is `host` or an FPGA alias from `list`,
     /// comma separated for several (`host,u280`); leave it out to claim the host, exactly like
@@ -64,7 +65,7 @@ enum Resource {
 }
 
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Clone)]
 enum Commands {
     /// show current claims
     Status {
@@ -138,7 +139,9 @@ enum Commands {
     },
     #[command(hide(true))]
     // Internal command used to trigger updating the list of claims and hogs
-    Maintenance {}
+    Maintenance {},
+    /// Manage per-resource advisory leases using JSON protocol v1.
+    Lease { #[arg(value_parser=["acquire","renew","status","release"])] op: String, resource: String, #[arg(long, default_value="shared")] mode: String, #[arg(long, default_value="default")] session: String, #[arg(long, default_value_t=3600)] seconds: i64, #[arg(long, default_value="")] token: String }
 }
 
 /// Commands that change the host or its state. They are refused up front without root instead
@@ -552,6 +555,18 @@ fn do_maintenance(state: &mut diskstate::DiskState) {
 
 fn main() {
     let cli = Cli::parse();
+
+    if let Some(Commands::Lease { op, resource, mode, session, seconds, token }) = cli.command.clone() {
+        match leases::dispatch(&op, &resource, &mode, &token, &session, seconds) {
+            Ok(result) => println!("{}", serde_json::json!({"version":1,"result":result})),
+            Err(e) => {
+                let code = match e.as_str() { "busy" => 3, "notowner" => 4, "expired" => 5, "invalid" => 2, _ => 6 };
+                eprintln!("{}", serde_json::json!({"version":1,"error":e}));
+                std::process::exit(code);
+            }
+        }
+        return;
+    }
 
     if let Some(command) = &cli.command {
         if needs_root(command) && !users::is_root() {

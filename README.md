@@ -102,6 +102,20 @@ installed hosthog — the two cannot see each other's claims, so do not hog with
 One deliberate difference: hosthog's `release` unhogs a host somebody else hogged; fpgahog only
 undoes a hog whose claim is gone.
 
+## Advisory per-resource leases (JSON v1)
+
+Resource identifiers are opaque stable strings chosen by clients (for example `fpga-slot-01`); hosthog does not identify or control hardware. Leases are advisory reservations only: they do not enforce device access, and expiry does not imply hardware quiescence or recovery.
+
+```sh
+sudo hosthog lease acquire fpga-slot-01 --mode exclusive --seconds 3600 --session agent-1
+# save result.lease.token securely
+sudo hosthog lease status fpga-slot-01
+sudo hosthog lease renew fpga-slot-01 --token TOKEN --seconds 1800
+sudo hosthog lease release fpga-slot-01 --token TOKEN
+```
+
+Shared leases coexist; exclusive leases conflict with every active lease. Responses are a single JSON object with `version: 1` and `result`; errors are JSON on stderr. Exit codes: 2 invalid input, 3 busy, 4 not owner/not found, 5 expired, 6 state/system error. Mutation requires both token and the caller's real UID, so sessions under one user cannot release each other's leases. State is separate from legacy host-wide claim state. Production state is root-protected under `/var/lib/hosthog/leases`; `HOSTHOG_LEASE_STATE` permits an absolute isolated path only for unprivileged invocations, for tests. Expiry is logical only: it does not reset/program hardware, kill processes, or establish device safety. No FPGA identity binding or quarantine/recovery inference is performed.
+
 ## Installation
 
 Needs `at` for claims to expire on time.
