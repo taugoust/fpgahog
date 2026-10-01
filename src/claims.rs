@@ -16,6 +16,7 @@ fn next_minute(timeout: DateTime<Local>) -> DateTime<Local> {
     return timeout + Duration::seconds(61);
 }
 
+#[cfg(test)]
 fn maintenance_command(program: &str) -> String {
     format!("{} maintenance", program)
 }
@@ -257,7 +258,6 @@ pub fn split_claim_args(
             }),
             None => Err(format!("missing timeout after `{}`", first)),
         };
-pub struct Conflict {
     }
 
     if is_timeout(first) {

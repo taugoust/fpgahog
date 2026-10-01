@@ -61,33 +61,27 @@
               mainProgram = "fpgahog";
             };
           };
-<<<<<<< HEAD
-=======
-          hosthog = pkgs.symlinkJoin {
-            name = "hosthog-${cargoMetadata.version}";
-            paths = [ unwrappedHosthog ];
+          runtime = pkgs.symlinkJoin {
+            name = "fpgahog-runtime-${cargoMetadata.version}";
+            paths = [ fpgahog ];
             nativeBuildInputs = [ pkgs.makeWrapper ];
             postBuild = ''
+              wrapProgram $out/bin/fpgahog \
+                --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.util-linux pkgs.at ]}
               wrapProgram $out/bin/hosthog \
                 --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.util-linux pkgs.at ]}
             '';
-            meta = unwrappedHosthog.meta;
+            meta = fpgahog.meta;
           };
->>>>>>> cdec4ff (Bundle at client in runtime wrapper)
         in {
-<<<<<<< HEAD
-          packages.default = fpgahog;
-          checks = { package = fpgahog; };
-=======
-          packages.default = hosthog;
+          packages.default = runtime;
           checks = {
-            package = pkgs.runCommand "hosthog-package-check" { } ''
-              test -x ${hosthog}/bin/hosthog
-              ${hosthog}/bin/hosthog --version | grep -Fx "hosthog ${cargoMetadata.version}"
+            package = pkgs.runCommand "fpgahog-package-check" { } ''
+              test -x ${runtime}/bin/fpgahog
+              test -x ${runtime}/bin/hosthog
               touch $out
             '';
           };
->>>>>>> 7ca002b (Complete Nix runtime packaging)
           devShells.default = pkgs.mkShell {
             inputsFrom = [ fpgahog ];
             RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";

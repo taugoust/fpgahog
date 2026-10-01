@@ -17,7 +17,7 @@ fn lease_cli_is_machine_readable_and_isolated_from_host_state() {
     std::fs::create_dir_all(&root).unwrap();
     let path = root.join("leases.json");
     let run = |args: &[&str]| {
-        Command::new(env!("CARGO_BIN_EXE_hosthog"))
+        Command::new(env!("CARGO_BIN_EXE_fpgahog"))
             .args(args)
             .env("HOSTHOG_LEASE_STATE", &path)
             .output()

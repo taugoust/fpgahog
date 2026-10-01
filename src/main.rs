@@ -159,7 +159,8 @@ fn needs_root(command: &Commands) -> bool {
         | Commands::List { .. }
         | Commands::Post { .. }
         | Commands::Users { .. }
-        | Commands::Check { .. } => false,
+        | Commands::Check { .. }
+        | Commands::Lease { .. } => false,
     }
 }
 
