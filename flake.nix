@@ -35,15 +35,19 @@
             cargo = rustToolchain;
             rustc = rustToolchain;
           };
+          cargoMetadata = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package;
           fpgahog = rustPlatform.buildRustPackage {
-            pname = "fpgahog";
-            version = "0.3.0";
-            src = pkgs.lib.cleanSourceWith {
-              src = self;
-              filter = path: type:
-                let name = builtins.baseNameOf path;
-                in !(type == "directory" && builtins.elem name [ ".git" ".build" "target" ])
-                  && !(type == "regular" && name == "result");
+            pname = cargoMetadata.name;
+            version = cargoMetadata.version;
+            src = pkgs.lib.fileset.toSource {
+              root = ./.;
+              fileset = pkgs.lib.fileset.unions [
+                ./Cargo.toml
+                ./Cargo.lock
+                ./LICENSE
+                (pkgs.lib.fileset.maybeMissing ./src)
+                (pkgs.lib.fileset.maybeMissing ./tests)
+              ];
             };
             cargoLock.lockFile = ./Cargo.lock;
             postInstall = ''
@@ -58,8 +62,19 @@
             };
           };
         in {
+<<<<<<< HEAD
           packages.default = fpgahog;
           checks = { package = fpgahog; };
+=======
+          packages.default = hosthog;
+          checks = {
+            package = pkgs.runCommand "hosthog-package-check" { } ''
+              test -x ${hosthog}/bin/hosthog
+              ${hosthog}/bin/hosthog --version | grep -Fx "hosthog ${cargoMetadata.version}"
+              touch $out
+            '';
+          };
+>>>>>>> 7ca002b (Complete Nix runtime packaging)
           devShells.default = pkgs.mkShell {
             inputsFrom = [ fpgahog ];
             RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";

@@ -16,6 +16,10 @@ fn next_minute(timeout: DateTime<Local>) -> DateTime<Local> {
     return timeout + Duration::seconds(61);
 }
 
+fn maintenance_command(program: &str) -> String {
+    format!("{} maintenance", program)
+}
+
 fn schedule_maintenance(timeout: DateTime<Local>) {
     let timeout = next_minute(timeout);
     let binary = util::prog_for_later();
@@ -25,6 +29,8 @@ fn schedule_maintenance(timeout: DateTime<Local>) {
             binary
         );
     }
+    // Log to the journal instead of letting at mail the output of every re-check.
+    let future_command = format!("{} maintenance 2>&1 | logger -t fpgahog", binary);
     // Log to the journal instead of letting at mail the output of every re-check.
     let future_command = format!("{} maintenance 2>&1 | logger -t fpgahog", binary);
     let future = format!("{}", timeout.format("%H:%M %Y-%m-%d"));
@@ -251,6 +257,7 @@ pub fn split_claim_args(
             }),
             None => Err(format!("missing timeout after `{}`", first)),
         };
+pub struct Conflict {
     }
 
     if is_timeout(first) {
